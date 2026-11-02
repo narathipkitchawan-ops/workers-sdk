@@ -2,7 +2,7 @@
 const { spawn } = require("child_process");
 const path = require("path");
 
-const MIN_NODE_VERSION = "22.0.0";
+const MIN_NODE_VERSION = "22.12.0";
 let wranglerProcess;
 
 /**
