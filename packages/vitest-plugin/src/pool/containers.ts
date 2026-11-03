@@ -1,6 +1,7 @@
 import path from "node:path";
 import {
 	createContainerDevPlan,
+	createContainerDevPlanForCfConfig,
 	generateContainerBuildId,
 	isCloudflareRegistryImage,
 	prepareContainerImagesForDev,
@@ -8,9 +9,12 @@ import {
 } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { UserError } from "@cloudflare/workers-utils/errors";
+import { toApiComplianceRegion } from "./new-config";
+import type { LoadedNewConfig } from "./new-config";
 import type {
 	ContainerDevOptions,
 	ContainerDevPlan,
+	ContainerDevRuntimeOptions,
 	ViteLogger,
 } from "@cloudflare/containers-shared";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
@@ -20,6 +24,8 @@ import type { TestProject, Vitest } from "vitest/node";
 interface ProjectContainerEnvironment {
 	containerBuildId: string;
 	containerEngine: NonNullable<V4MiniflareOptions["containerEngine"]>;
+	/** Runtime options of each Container-backed Durable Object class. */
+	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions>;
 }
 
 /**
@@ -375,6 +381,39 @@ export function getWranglerContainerConfiguration(
 }
 
 /**
+ * Gets the local Containers that a `cloudflare.config.ts` defines. It has no
+ * setting that disables them, so, as in the Vite plugin, every Durable Object
+ * that references a Container runs one.
+ *
+ * @param config - The loaded `cloudflare.config.ts`.
+ * @param configPath - Absolute path to the `cloudflare.config.ts` file.
+ * @returns The Containers.
+ */
+export function getCloudflareConfigContainerConfiguration(
+	{ containers, settings, worker }: LoadedNewConfig,
+	configPath: string
+): ProjectContainerConfiguration {
+	const complianceRegion = toApiComplianceRegion(settings.complianceRegion);
+	return {
+		configPath,
+		complianceConfig:
+			complianceRegion === undefined
+				? {}
+				: { compliance_region: complianceRegion },
+		registryConfigureCommand: "cf containers registries create",
+		planInputs: [settings.complianceRegion, containers, worker.exports],
+		createPlan: (containerBuildId) =>
+			createContainerDevPlanForCfConfig({
+				containers,
+				exports: worker.exports,
+				// Like `entrypoint`, image paths are relative to the config's directory
+				root: path.dirname(configPath),
+				containerBuildId,
+			}),
+	};
+}
+
+/**
  * Prepares the local Container environment shared by one Vitest project.
  * Successful preparation remains cached until Vitest closes, the project's
  * Container configuration changes, or, in watch mode, a Dockerfile or
@@ -397,14 +436,6 @@ export async function prepareProjectContainers(
 		return undefined;
 	}
 
-	const containers = getContainers(project.vitest);
-	if (containers.closing) {
-		throw getPreparationError(
-			project,
-			new Error("Container image preparation was aborted")
-		);
-	}
-
 	const containerBuildId = generateContainerBuildId();
 	let plan: ContainerDevPlan | undefined;
 	try {
@@ -416,6 +447,14 @@ export async function prepareProjectContainers(
 		unwatchProject(project);
 		dropEnvironment(project);
 		return undefined;
+	}
+
+	const containers = getContainers(project.vitest);
+	if (containers.closing) {
+		throw getPreparationError(
+			project,
+			new Error("Container image preparation was aborted")
+		);
 	}
 
 	const dockerPath = getDockerPath();
@@ -437,6 +476,7 @@ export async function prepareProjectContainers(
 	const environment: ProjectContainerEnvironment = {
 		containerBuildId,
 		containerEngine,
+		containerRuntimeOptions: plan.containerRuntimeOptions,
 	};
 	const preparation = prepareImages(
 		containerConfig,
