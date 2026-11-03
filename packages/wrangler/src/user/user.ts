@@ -55,20 +55,29 @@ export { WRANGLER_KEYRING_SERVICE_NAME } from "@cloudflare/workers-auth/wrangler
  *   - the interactive `prompt` / `select` (with the `select` prompt's
  *     non-interactive `NoDefaultValueProvided` signal).
  */
-const auth = createWranglerAuth({
-	logger,
-	// Temporary-account notices go to stderr so they never corrupt command
-	// output on stdout (JSON, piped values), and stay visible when `--json`
-	// commands lower the log level to "error".
-	temporaryAccountLogger: {
-		log: (...args: unknown[]) => logger.console("error", ...args),
-	},
-	userAgent: `wrangler/${wranglerVersion}`,
-	prompt,
-	select,
-	isNoDefaultValueProvidedError: (error) =>
-		error instanceof NoDefaultValueProvided,
-});
+function createAuth() {
+	return createWranglerAuth({
+		logger,
+		// Temporary-account notices go to stderr so they never corrupt command
+		// output on stdout (JSON, piped values), and stay visible when `--json`
+		// commands lower the log level to "error".
+		temporaryAccountLogger: {
+			log: (...args: unknown[]) => logger.console("error", ...args),
+		},
+		userAgent: `wrangler/${wranglerVersion}`,
+		prompt,
+		select,
+		isNoDefaultValueProvidedError: (error) =>
+			error instanceof NoDefaultValueProvided,
+	});
+}
+
+let auth = createAuth();
+
+/** Replace the module-scoped auth instance when a test starts a new invocation. */
+export function resetAuthForTesting(): void {
+	auth = createAuth();
+}
 
 /**
  * Set the active auth profile for all subsequent credential lookups.

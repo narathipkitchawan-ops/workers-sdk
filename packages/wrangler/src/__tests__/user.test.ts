@@ -31,6 +31,7 @@ import {
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
 	readAuthCredentials,
+	resetAuthForTesting,
 	requireAuth,
 	writeAuthConfigFile,
 	writeAuthCredentials,
@@ -61,6 +62,7 @@ describe("User", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
+		resetAuthForTesting();
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 	});
 
