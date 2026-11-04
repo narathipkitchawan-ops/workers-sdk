@@ -41,6 +41,12 @@ export interface ProjectContainerConfiguration {
 	containerEngine?: NonNullable<V4MiniflareOptions["containerEngine"]>;
 	/** Command that configures registry credentials, for error messages. */
 	registryConfigureCommand: string;
+	/**
+	 * How to run the project's tests without Docker, for the error shown when
+	 * Docker cannot be reached. Absent when the configuration cannot disable
+	 * local Containers.
+	 */
+	dockerUnavailableHint?: string;
 	/** Configuration the plan derives from; images are prepared again when it changes. */
 	planInputs: unknown;
 	/**
@@ -340,7 +346,7 @@ async function prepareImages(
 		},
 		logger,
 		complianceConfig: containerConfig.complianceConfig,
-		configFileName: path.basename(containerConfig.configPath),
+		dockerUnavailableHint: containerConfig.dockerUnavailableHint,
 		registryConfigureCommand: containerConfig.registryConfigureCommand,
 	});
 
@@ -369,6 +375,7 @@ export function getWranglerContainerConfiguration(
 		complianceConfig: config,
 		containerEngine: config.dev.container_engine,
 		registryConfigureCommand: "wrangler containers registries configure",
+		dockerUnavailableHint: `If your tests do not need Containers, set dev.enable_containers to false in your ${path.basename(configPath)} to run them without Docker.`,
 		planInputs: [config.compliance_region, config.containers, config.exports],
 		createPlan: (containerBuildId) =>
 			createContainerDevPlan({

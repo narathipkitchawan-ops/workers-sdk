@@ -125,7 +125,8 @@ export async function prepareContainerImagesForVite(options: {
 		onContainerImagePreparationEnd: () => {},
 		logger: options.logger,
 		complianceConfig,
-		configFileName: "cloudflare.config.ts",
+		// `cloudflare.config.ts` has no setting that disables local Containers,
+		// so the error when Docker cannot be reached offers no way around it.
 		// TODO: The Vite plugin should not own this `cf` command. Remove the
 		// hardcoded value once `cf` can provide it directly.
 		registryConfigureCommand:
