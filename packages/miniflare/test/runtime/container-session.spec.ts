@@ -46,6 +46,8 @@ async function startDockerEngine() {
 		/** Session ID of each container listing, in order. */
 		listedSessions: [] as string[],
 		afterListing: () => {},
+		/** Accepts requests but never responds while set. */
+		stalled: false,
 		addContainer(
 			name: string,
 			labels: Labels,
@@ -67,6 +69,9 @@ async function startDockerEngine() {
 		},
 	};
 	const server = http.createServer((req, res) => {
+		if (engine.stalled) {
+			return;
+		}
 		const url = new URL(req.url ?? "/", "http://localhost");
 		const filters = JSON.parse(url.searchParams.get("filters") ?? "{}") as {
 			label?: string[];
@@ -264,5 +269,23 @@ test("logs how to remove a session that it cannot remove", async ({
 		expect.stringContaining(
 			`docker rm --force $(docker ps --all --quiet --filter label=${SESSION_LABEL}=a)`
 		),
+	]);
+});
+
+test("logs how to remove a session when Docker stops responding", async ({
+	expect,
+}) => {
+	const docker = await startDockerEngine();
+	docker.stalled = true;
+	const log = new TestLog();
+
+	await removeContainerSession(
+		{ id: "a", fingerprint: "", socketPath: docker.socketPath },
+		log,
+		100
+	);
+
+	expect(log.logsAtLevel(LogLevel.WARN)).toEqual([
+		expect.stringContaining("did not respond within 100 ms"),
 	]);
 });
