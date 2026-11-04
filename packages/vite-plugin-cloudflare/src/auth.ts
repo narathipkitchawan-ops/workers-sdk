@@ -66,6 +66,8 @@ export function createAuth(profileDir: string, logger: Logger) {
 					"To use this account automatically in future, configure accountId in cloudflare.config.ts:",
 					"",
 					`  accountId: ${JSON.stringify(accountId)},`,
+					"",
+					"Alternatively, set the `CLOUDFLARE_ACCOUNT_ID` environment variable.",
 				].join("\n")
 			);
 			return accountId;
