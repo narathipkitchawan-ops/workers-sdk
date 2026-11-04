@@ -29,7 +29,7 @@ export const USER_AGENT = `vite-plugin/${packageVersion}`;
 /**
  * Set up cf authentication using the profile associated with the Vite project.
  */
-export function createAuth(profileDir: string, logger: Logger) {
+export function createAuth(profileDir: string, logger: Logger): CloudflareAuth {
 	const context = {
 		logger,
 		userAgent: USER_AGENT,
@@ -86,20 +86,18 @@ export function createAuth(profileDir: string, logger: Logger) {
  *
  * @param profileDir - Directory used to resolve the cf auth profile.
  * @param accountId - The configured account ID, if any.
- * @param logger - Logger for the auth flow.
+ * @param getAuth - Returns the auth instance shared by this Vite project.
  * @returns A hook resolving the account ID and API token, with a key
  * identifying those credentials.
  */
 export function getRemoteBindingsAuth(
 	profileDir: string,
 	accountId: string | undefined,
-	logger: Logger
+	getAuth: () => CloudflareAuth
 ): RemoteBindingsAuth {
-	let auth: CloudflareAuth | undefined;
 	return {
 		hook: async () => {
-			// Only resolve the profile once a session actually needs credentials
-			auth ??= createAuth(profileDir, logger);
+			const auth = getAuth();
 			return {
 				accountId: await auth.requireAuth(
 					accountId ? { account_id: accountId } : {}

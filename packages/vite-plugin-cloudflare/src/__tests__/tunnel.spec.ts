@@ -10,6 +10,7 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
+import { createAuth, createLogger } from "../auth";
 import { PluginContext } from "../context";
 import {
 	QUICK_TUNNEL_ALLOWED_HOST,
@@ -359,7 +360,8 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: undefined,
 			complianceRegion: undefined,
-			profileDir: server.config.root,
+			getAuth: () =>
+				createAuth(server.config.root, createLogger(server.config.logger)),
 		});
 
 		await expect(
@@ -371,7 +373,8 @@ describe("tunnel plugin", () => {
 				allowedHosts: true,
 				accountId: undefined,
 				complianceRegion: undefined,
-				profileDir: server.config.root,
+				getAuth: () =>
+					createAuth(server.config.root, createLogger(server.config.logger)),
 			})
 		).rejects.toBe(disposeError);
 
@@ -697,7 +700,8 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
-			profileDir: server.config.root,
+			getAuth: () =>
+				createAuth(server.config.root, createLogger(server.config.logger)),
 		});
 
 		expect(tunnelManager.isOpen()).toBe(true);
@@ -711,7 +715,8 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
-			profileDir: server.config.root,
+			getAuth: () =>
+				createAuth(server.config.root, createLogger(server.config.logger)),
 		});
 
 		await expect(startPromise).resolves.toBeNull();
@@ -755,7 +760,8 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
-			profileDir: server.config.root,
+			getAuth: () =>
+				createAuth(server.config.root, createLogger(server.config.logger)),
 		});
 
 		tunnelManager.dispose();
